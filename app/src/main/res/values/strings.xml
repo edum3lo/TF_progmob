@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">FITJourney</string>
+    <string name="logo">Logo do FITJourney</string>
+    <string name="registro">Registro</string>
+    <string name="lembrete">Lembrete</string>
+    <string name="fotos">Fotos</string>
+    <string name="locais">Locais</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
