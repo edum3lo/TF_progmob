@@ -10,12 +10,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 
 public class HomeFragment extends Fragment {
 
-    private ImageView imageRegistro, imageLembrete, imageFotos, imageLocais;
-    private TextView textRegistro, textLembrete, textFotos, textLocais;
+    private ImageView imageRegistro, imageLembrete, imageFotos;
+    private TextView textRegistro, textLembrete, textFotos;
 
     @Nullable
     @Override
@@ -25,12 +24,10 @@ public class HomeFragment extends Fragment {
         imageRegistro = view.findViewById(R.id.imageRegistro);
         imageLembrete = view.findViewById(R.id.imageLembrete);
         imageFotos = view.findViewById(R.id.imageFotos);
-        imageLocais = view.findViewById(R.id.imageLocais);
 
         textRegistro = view.findViewById(R.id.textRegistro);
         textLembrete = view.findViewById(R.id.textLembrete);
         textFotos = view.findViewById(R.id.textFotos);
-        textLocais = view.findViewById(R.id.textLocais);
 
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
@@ -43,29 +40,22 @@ public class HomeFragment extends Fragment {
                     fragment = new LembretesFragment();
                 } else if (id == R.id.imageFotos || id == R.id.textFotos) {
                     fragment = new FotosFragment();
-                } else if (id == R.id.imageLocais || id == R.id.textLocais) {
-                    // Adicione o fragmento de locais aqui quando estiver pronto
                 }
                 if (fragment != null) {
-                    FragmentTransaction transaction = getFragmentManager().beginTransaction();
-                    transaction.replace(R.id.fragment_container, fragment);
-                    transaction.addToBackStack(null);
-                    transaction.commit();
+                    getParentFragmentManager().beginTransaction()
+                            .replace(R.id.fragment_container, fragment)
+                            .addToBackStack(null)
+                            .commit();
                 }
             }
         };
 
         imageRegistro.setOnClickListener(listener);
         textRegistro.setOnClickListener(listener);
-
         imageLembrete.setOnClickListener(listener);
         textLembrete.setOnClickListener(listener);
-
         imageFotos.setOnClickListener(listener);
         textFotos.setOnClickListener(listener);
-
-        imageLocais.setOnClickListener(listener);
-        textLocais.setOnClickListener(listener);
 
         return view;
     }
