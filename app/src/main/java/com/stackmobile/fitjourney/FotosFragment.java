@@ -4,7 +4,6 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -18,10 +17,10 @@ import android.widget.GridView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
@@ -33,8 +32,6 @@ import java.util.Date;
 
 public class FotosFragment extends Fragment {
 
-    private static final int REQUEST_IMAGE_CAPTURE = 1;
-    private static final int REQUEST_PERMISSIONS = 100;
     private static final String TAG = "FotosFragment";
     private Button buttonTakePhoto;
     private GridView gridViewGallery;
@@ -42,6 +39,8 @@ public class FotosFragment extends Fragment {
     private ArrayList<String> imagePathList;
     private ImageAdapter imageAdapter;
     private String currentPhotoPath;
+    private ActivityResultLauncher<String[]> requestPermissionLauncher;
+    private ActivityResultLauncher<Intent> takePictureLauncher;
 
     @SuppressLint("MissingInflatedId")
     @Nullable
@@ -50,76 +49,61 @@ public class FotosFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_fotos, container, false);
 
         buttonTakePhoto = view.findViewById(R.id.buttonTakePhoto);
-        gridViewGallery = view.findViewById(R.id.gridViewGallery);
-        textViewNoPhotos = view.findViewById(R.id.textViewVisitor);
-
+        gridViewGallery = view.findViewById(R.id.gridViewPhotos);
+        textViewNoPhotos = view.findViewById(R.id.textFotos);
         imagePathList = new ArrayList<>();
         imageAdapter = new ImageAdapter(getContext(), imagePathList);
         gridViewGallery.setAdapter(imageAdapter);
 
-        buttonTakePhoto.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (checkAndRequestPermissions()) {
-                    dispatchTakePictureIntent();
-                }
-            }
-        });
+        initializePermissionLauncher();
+        initializeTakePictureLauncher();
+
+        buttonTakePhoto.setOnClickListener(v -> requestPermissionLauncher.launch(new String[] {
+                Manifest.permission.CAMERA,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+        }));
 
         loadImagesFromGallery();
 
         return view;
     }
 
-    private boolean checkAndRequestPermissions() {
-        int cameraPermission = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA);
-        int writePermission = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        int readPermission = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
+    private void initializePermissionLauncher() {
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), permissions -> {
+            boolean allGranted = true;
+            for (Boolean granted : permissions.values()) {
+                allGranted &= granted;
+            }
+            if (allGranted) {
+                dispatchTakePictureIntent();
+            } else {
+                Toast.makeText(getContext(), "Permissions not granted", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
 
-        ArrayList<String> listPermissionsNeeded = new ArrayList<>();
-
-        if (cameraPermission != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.CAMERA);
-        }
-        if (writePermission != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        }
-        if (readPermission != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE);
-        }
-
-        if (!listPermissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(getActivity(), listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]), REQUEST_PERMISSIONS);
-            return false;
-        }
-        return true;
+    private void initializeTakePictureLauncher() {
+        takePictureLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+            if (result.getResultCode() == Activity.RESULT_OK) {
+                galleryAddPic();
+                loadImagesFromGallery();
+            }
+        });
     }
 
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getContext().getPackageManager()) != null) {
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                Log.e(TAG, "Erro ao criar arquivo da foto", ex);
-            }
-
+        File photoFile = null;
+        try {
+            photoFile = createImageFile();
             if (photoFile != null) {
                 Uri photoURI = FileProvider.getUriForFile(getContext(), "com.stackmobile.fitjourney.fileprovider", photoFile);
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+                takePictureLauncher.launch(takePictureIntent);
             }
-        }
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
-            galleryAddPic();
-            loadImagesFromGallery();
+        } catch (IOException ex) {
+            Log.e(TAG, "Error occurred while creating the file", ex);
         }
     }
 
@@ -138,10 +122,9 @@ public class FotosFragment extends Fragment {
 
     private void galleryAddPic() {
         Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        File f = new File(currentPhotoPath);
-        Uri contentUri = Uri.fromFile(f);
+        Uri contentUri = Uri.fromFile(new File(currentPhotoPath));
         mediaScanIntent.setData(contentUri);
-        getActivity().sendBroadcast(mediaScanIntent);
+        getContext().sendBroadcast(mediaScanIntent);
     }
 
     private void loadImagesFromGallery() {
@@ -161,17 +144,5 @@ public class FotosFragment extends Fragment {
         }
 
         imageAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_PERMISSIONS) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                dispatchTakePictureIntent();
-            } else {
-                Toast.makeText(getContext(), "Permissões necessárias não concedidas", Toast.LENGTH_SHORT).show();
-            }
-        }
     }
 }
