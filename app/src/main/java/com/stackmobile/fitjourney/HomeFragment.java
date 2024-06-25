@@ -10,6 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 
 public class HomeFragment extends Fragment {
 
@@ -31,32 +32,25 @@ public class HomeFragment extends Fragment {
         textFotos = view.findViewById(R.id.textFotos);
         textLocais = view.findViewById(R.id.textLocais);
 
-        // Temporarily disable intents to avoid ActivityNotFoundException
-        /*
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = null;
-                switch (v.getId()) {
-                    case R.id.imageRegistro:
-                    case R.id.textRegistro:
-                        intent = new Intent(getActivity(), RegistroActivity.class);
-                        break;
-                    case R.id.imageLembrete:
-                    case R.id.textLembrete:
-                        intent = new Intent(getActivity(), LembretesActivity.class);
-                        break;
-                    case R.id.imageFotos:
-                    case R.id.textFotos:
-                        intent = new Intent(getActivity(), FotosActivity.class);
-                        break;
-                    case R.id.imageLocais:
-                    case R.id.textLocais:
-                        intent = new Intent(getActivity(), LocaisActivity.class);
-                        break;
+                Fragment fragment = null;
+                int id = v.getId();
+                if (id == R.id.imageRegistro || id == R.id.textRegistro) {
+                    fragment = new RegistroFragment();
+                } else if (id == R.id.imageLembrete || id == R.id.textLembrete) {
+                    fragment = new LembretesFragment();
+                } else if (id == R.id.imageFotos || id == R.id.textFotos) {
+                    fragment = new FotosFragment();
+                } else if (id == R.id.imageLocais || id == R.id.textLocais) {
+                    // Adicione o fragmento de locais aqui quando estiver pronto
                 }
-                if (intent != null) {
-                    startActivity(intent);
+                if (fragment != null) {
+                    FragmentTransaction transaction = getFragmentManager().beginTransaction();
+                    transaction.replace(R.id.fragment_container, fragment);
+                    transaction.addToBackStack(null);
+                    transaction.commit();
                 }
             }
         };
@@ -72,7 +66,6 @@ public class HomeFragment extends Fragment {
 
         imageLocais.setOnClickListener(listener);
         textLocais.setOnClickListener(listener);
-        */
 
         return view;
     }
